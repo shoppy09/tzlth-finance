@@ -41,6 +41,17 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok, id: txn.id }, { status: ok ? 201 : 500 })
 }
 
+export async function PATCH(req: NextRequest) {
+  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { id, status } = await req.json()
+  const ledger = await getIncomeLedger()
+  const txn = ledger.transactions.find(t => t.id === id)
+  if (!txn) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  txn.status = status
+  const ok = await saveIncomeLedger(ledger)
+  return NextResponse.json({ ok })
+}
+
 export async function DELETE(req: NextRequest) {
   if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await req.json()

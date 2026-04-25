@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { ExpenseTransaction } from '@/lib/github'
+import { DeleteModal } from '@/app/_components/DeleteModal'
 
 const CATEGORIES = [
   { value: 'platform', label: '平台費用' },
@@ -19,6 +20,8 @@ export default function ExpensePage() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [monthFilter, setMonthFilter] = useState('all')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null)
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
     amount: '',
@@ -64,26 +67,52 @@ export default function ExpensePage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('確定刪除這筆支出記錄？')) return
     await fetch('/api/expense', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    setDeleteTarget(null)
     await load()
   }
 
-  const total = transactions.reduce((s, t) => s + t.amount, 0)
+  const months = [...new Set(transactions.map(t => t.date.slice(0, 7)))].sort().reverse()
+  const filtered = monthFilter === 'all' ? transactions : transactions.filter(t => t.date.startsWith(monthFilter))
+  const total = filtered.reduce((s, t) => s + t.amount, 0)
   const catLabel = (v: string) => CATEGORIES.find(c => c.value === v)?.label ?? v
 
   return (
     <div className="space-y-6">
+      {deleteTarget && (
+        <DeleteModal
+          message={`確定刪除「${deleteTarget.label}」？此動作無法還原。`}
+          onConfirm={() => handleDelete(deleteTarget.id)}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">支出流水帳</h1>
           <p className="text-gray-400 text-sm mt-1">
-            合計 <span className="text-orange-400 font-semibold">NT${total.toLocaleString()}</span>　共 {transactions.length} 筆
+            合計 <span className="text-orange-400 font-semibold">NT${total.toLocaleString()}</span>　共 {filtered.length} 筆
           </p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-          + 新增支出
-        </button>
+        <div className="flex items-center gap-3">
+          <select
+            value={monthFilter}
+            onChange={e => setMonthFilter(e.target.value)}
+            className="bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-lg px-3 py-2"
+          >
+            <option value="all">全部</option>
+            {months.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <a
+            href={`/api/export?type=expense&year=${new Date().getFullYear()}`}
+            className="text-xs text-gray-500 hover:text-white px-3 py-2 border border-gray-700 rounded-lg transition-colors"
+          >
+            📥 匯出
+          </a>
+          <button onClick={() => setShowForm(!showForm)} className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            + 新增支出
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -96,7 +125,7 @@ export default function ExpensePage() {
             </div>
             <div>
               <label className="text-xs text-gray-400 block mb-1">金額（NT$）*</label>
-              <input type="number" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" placeholder="3200" required />
+              <input type="number" min="1" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" placeholder="3200" required />
             </div>
             <div>
               <label className="text-xs text-gray-400 block mb-1">類別</label>
@@ -139,11 +168,13 @@ export default function ExpensePage() {
         <div className="text-gray-500 text-sm">載入中...</div>
       ) : loadError ? (
         <div className="text-red-400 text-sm text-center py-12">⚠️ 資料載入失敗，請重新整理頁面</div>
-      ) : transactions.length === 0 ? (
-        <div className="text-gray-500 text-sm text-center py-12">還沒有支出記錄，點「+ 新增支出」開始記帳</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-gray-500 text-sm text-center py-12">
+          {monthFilter === 'all' ? '還沒有支出記錄，點「+ 新增支出」開始記帳' : `${monthFilter} 沒有支出記錄`}
+        </div>
       ) : (
         <div className="space-y-2">
-          {transactions.map(t => (
+          {filtered.map(t => (
             <div key={t.id} className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4 flex items-center gap-4">
               <div className="text-sm text-gray-400 w-24">{t.date}</div>
               <div className="flex-1">
@@ -159,7 +190,12 @@ export default function ExpensePage() {
               <div className="text-sm font-semibold text-orange-400 w-20 text-right">
                 NT${t.amount.toLocaleString()}
               </div>
-              <button onClick={() => handleDelete(t.id)} className="text-gray-600 hover:text-red-400 text-xs transition-colors">刪除</button>
+              <button
+                onClick={() => setDeleteTarget({ id: t.id, label: `${t.description} NT$${t.amount.toLocaleString()}` })}
+                className="text-gray-600 hover:text-red-400 text-xs transition-colors"
+              >
+                刪除
+              </button>
             </div>
           ))}
         </div>

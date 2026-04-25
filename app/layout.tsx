@@ -23,6 +23,7 @@ export default function RootLayout({
           <a href="/" className="text-sm text-gray-400 hover:text-white transition-colors">總覽</a>
           <a href="/income" className="text-sm text-gray-400 hover:text-white transition-colors">收入</a>
           <a href="/expense" className="text-sm text-gray-400 hover:text-white transition-colors">支出</a>
+          <a href="/reports" className="text-sm text-gray-400 hover:text-white transition-colors">月報</a>
           <div className="ml-auto flex items-center gap-4">
             <span className="text-xs text-gray-600">職涯停看聽</span>
             <LogoutButton />

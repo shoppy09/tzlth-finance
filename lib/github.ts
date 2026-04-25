@@ -70,31 +70,33 @@ async function writeJsonFile(path: string, content: unknown, message: string): P
   return res.ok
 }
 
-const YEAR = new Date().getFullYear()
-const INCOME_PATH = `finance/ledger/income-${YEAR}.json`
-const EXPENSE_PATH = `finance/ledger/expense-${YEAR}.json`
+function getIncomePath(year: number) { return `finance/ledger/income-${year}.json` }
+function getExpensePath(year: number) { return `finance/ledger/expense-${year}.json` }
 
-export async function getIncomeLedger(): Promise<IncomeLedger> {
-  return readJsonFile<IncomeLedger>(INCOME_PATH, { transactions: [] })
+export async function getIncomeLedger(year?: number): Promise<IncomeLedger> {
+  return readJsonFile<IncomeLedger>(getIncomePath(year ?? new Date().getFullYear()), { transactions: [] })
 }
 
-export async function getExpenseLedger(): Promise<ExpenseLedger> {
-  return readJsonFile<ExpenseLedger>(EXPENSE_PATH, { transactions: [] })
+export async function getExpenseLedger(year?: number): Promise<ExpenseLedger> {
+  return readJsonFile<ExpenseLedger>(getExpensePath(year ?? new Date().getFullYear()), { transactions: [] })
 }
 
-export async function saveIncomeLedger(ledger: IncomeLedger): Promise<boolean> {
-  return writeJsonFile(INCOME_PATH, ledger, `finance: update income ledger ${new Date().toISOString().slice(0, 10)}`)
+export async function saveIncomeLedger(ledger: IncomeLedger, year?: number): Promise<boolean> {
+  const path = getIncomePath(year ?? new Date().getFullYear())
+  return writeJsonFile(path, ledger, `finance: update income ledger ${new Date().toISOString().slice(0, 10)}`)
 }
 
-export async function saveExpenseLedger(ledger: ExpenseLedger): Promise<boolean> {
-  return writeJsonFile(EXPENSE_PATH, ledger, `finance: update expense ledger ${new Date().toISOString().slice(0, 10)}`)
+export async function saveExpenseLedger(ledger: ExpenseLedger, year?: number): Promise<boolean> {
+  const path = getExpensePath(year ?? new Date().getFullYear())
+  return writeJsonFile(path, ledger, `finance: update expense ledger ${new Date().toISOString().slice(0, 10)}`)
 }
 
 // Summary for /api/summary (used by HQ dashboard)
 export async function computeMonthlySummary(month: string) {
-  // month format: YYYY-MM
-  const income = await getIncomeLedger()
-  const expense = await getExpenseLedger()
+  // month format: YYYY-MM (or YYYY for full-year view)
+  const year = parseInt(month.slice(0, 4))
+  const income = await getIncomeLedger(year)
+  const expense = await getExpenseLedger(year)
 
   const incTxns = income.transactions.filter(t => t.date.startsWith(month))
   const expTxns = expense.transactions.filter(t => t.date.startsWith(month))

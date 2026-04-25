@@ -1,28 +1,56 @@
 import { computeMonthlySummary } from '@/lib/github'
 
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
+
 function fmt(n: number) {
   return `NT$${n.toLocaleString('zh-TW')}`
 }
 
-export default async function HomePage() {
-  const month = new Date().toISOString().slice(0, 7)
-  const summary = await computeMonthlySummary(month)
+export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
+  const params = await searchParams
+  const view = params.view as string | undefined
+
+  const today = new Date()
+  const currentMonth = today.toISOString().slice(0, 7)
+  const currentYear = today.getFullYear().toString()
+
+  const isYear = view === 'year'
+  const period = isYear ? currentYear : currentMonth
+  const summary = await computeMonthlySummary(period)
 
   const netColor = summary.net >= 0 ? 'text-green-400' : 'text-red-400'
+  const periodLabel = isYear ? `${currentYear} 年度` : `${currentMonth.replace('-', ' 年 ')} 月`
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-white">{month.replace('-', ' 年 ')} 月財務總覽</h1>
-        <p className="text-gray-400 text-sm mt-1">資料來源：tzlth-hq / finance / ledger</p>
+      {/* Header + Tab */}
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">{periodLabel}財務總覽</h1>
+          <p className="text-gray-400 text-sm mt-1">資料來源：tzlth-hq / finance / ledger</p>
+        </div>
+        <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1">
+          <a href="/"
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              !isYear ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
+            }`}>
+            本月
+          </a>
+          <a href="/?view=year"
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              isYear ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
+            }`}>
+            本年
+          </a>
+        </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard label="本月收入" value={fmt(summary.income_total)} sub={`已收 ${fmt(summary.income_received)}`} color="text-green-400" />
+        <KpiCard label="收入" value={fmt(summary.income_total)} sub={`已收 ${fmt(summary.income_received)}`} color="text-green-400" />
         <KpiCard label="待收款" value={fmt(summary.income_pending)} sub="未確認收款" color="text-yellow-400" />
-        <KpiCard label="本月支出" value={fmt(summary.expense_total)} sub={`${summary.transactions.expense_count} 筆`} color="text-orange-400" />
-        <KpiCard label="本月淨利" value={fmt(summary.net)} sub={summary.net >= 0 ? '盈餘' : '虧損（建置期正常）'} color={netColor} />
+        <KpiCard label="支出" value={fmt(summary.expense_total)} sub={`${summary.transactions.expense_count} 筆`} color="text-orange-400" />
+        <KpiCard label="淨利" value={fmt(summary.net)} sub={summary.net >= 0 ? '盈餘' : '虧損（建置期正常）'} color={netColor} />
       </div>
 
       {/* Quick Links */}
