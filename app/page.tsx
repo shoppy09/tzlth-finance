@@ -1,4 +1,4 @@
-import { computeMonthlySummary, getSubscriptions } from '@/lib/github'
+import { computeMonthlySummary, getSubscriptions, getDailyRevenue } from '@/lib/github'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
@@ -16,9 +16,10 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
 
   const isYear = view === 'year'
   const period = isYear ? currentYear : currentMonth
-  const [summary, subData] = await Promise.all([
+  const [summary, subData, dailyRevenue] = await Promise.all([
     computeMonthlySummary(period),
     getSubscriptions(),
+    getDailyRevenue(currentMonth),
   ])
 
   // Subscriptions expiring within 30 days
@@ -66,6 +67,34 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         <KpiCard label="支出" value={fmt(summary.expense_total)} sub={`${summary.transactions.expense_count} 筆`} color="text-orange-400" />
         <KpiCard label="淨利" value={fmt(summary.net)} sub={summary.net >= 0 ? '盈餘' : '虧損（建置期正常）'} color={netColor} />
       </div>
+
+      {/* Booking Revenue (RCF-009) — 僅在本月檢視且有資料時顯示 */}
+      {!isYear && dailyRevenue.records.length > 0 && (() => {
+        const paymentCount   = dailyRevenue.records.reduce((s, r) => s + (r.payment_by_date?.count   ?? 0), 0)
+        const paymentRevenue = dailyRevenue.records.reduce((s, r) => s + (r.payment_by_date?.revenue ?? 0), 0)
+        const lastSynced     = dailyRevenue.records[dailyRevenue.records.length - 1]?.synced_at
+        return (
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <h2 className="text-sm font-semibold text-blue-400 mb-3">🗓 預約系統（本月）</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-xs text-gray-500 mb-1">已付款預約收入</div>
+                <div className="text-lg font-bold text-green-400">{fmt(paymentRevenue)}</div>
+                <div className="text-xs text-gray-500">{paymentCount} 筆</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">資料同步</div>
+                {lastSynced ? (
+                  <div className="text-xs text-gray-400">{new Date(lastSynced).toLocaleString('zh-TW')}</div>
+                ) : (
+                  <div className="text-xs text-gray-600">尚無同步記錄</div>
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-gray-600 mt-3">以上為預約系統資料；已確認收款請至「收入」頁新增記錄</p>
+          </div>
+        )
+      })()}
 
       {/* Expiring Soon */}
       {expiringSoon.length > 0 && (

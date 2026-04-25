@@ -118,6 +118,24 @@ export async function saveSubscriptions(data: SubscriptionList): Promise<boolean
   return writeJsonFile(SUBSCRIPTIONS_PATH, data, `finance: update subscriptions ${new Date().toISOString().slice(0, 10)}`)
 }
 
+// RCF-009 整合：預約系統每日收入 JSON（由 GitHub Actions 每日 UTC 17:00 同步）
+export interface DailyBookingRecord {
+  date: string
+  booking_by_date:  { count: number; revenue: number; order_ids: string[] }
+  payment_by_date:  { count: number; revenue: number; order_ids: string[] }
+  created_by_date:  { count_total: number; count_confirmed: number; count_cancelled: number }
+  tenant: string
+  synced_at: string
+}
+
+export interface DailyRevenueData {
+  records: DailyBookingRecord[]
+}
+
+export async function getDailyRevenue(month: string): Promise<DailyRevenueData> {
+  return readJsonFile<DailyRevenueData>(`finance/${month}-daily.json`, { records: [] })
+}
+
 // Summary for /api/summary (used by HQ dashboard)
 export async function computeMonthlySummary(month: string) {
   // month format: YYYY-MM (or YYYY for full-year view)
