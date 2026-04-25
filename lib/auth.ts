@@ -6,7 +6,7 @@ export const COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days in seconds
 export function verifyPin(input: string): boolean {
   const pin = process.env.ACCESS_PIN
   if (!pin) return false
-  return input === pin
+  return input.trim() === pin.trim()
 }
 
 export function generateToken(): string {
