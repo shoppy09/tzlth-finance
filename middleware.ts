@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { AUTH_COOKIE } from './lib/auth'
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/summary', '/api/debug-pin']
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/summary']
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl

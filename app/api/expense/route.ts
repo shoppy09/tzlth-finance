@@ -17,8 +17,14 @@ export async function POST(req: NextRequest) {
   if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await req.json()
   const ledger = await getExpenseLedger()
+  const dateStr = body.date.replace(/-/g, '')
+  const prefix = `EXP-${dateStr}-`
+  const existing = ledger.transactions
+    .filter(t => t.id.startsWith(prefix))
+    .map(t => parseInt(t.id.replace(prefix, ''), 10))
+  const maxSeq = existing.length > 0 ? Math.max(...existing) : 0
   const txn: ExpenseTransaction = {
-    id: `EXP-${body.date.replace(/-/g, '')}-${String(ledger.transactions.length + 1).padStart(3, '0')}`,
+    id: `EXP-${dateStr}-${String(maxSeq + 1).padStart(3, '0')}`,
     date: body.date,
     amount: Number(body.amount),
     category: body.category ?? 'other',

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { LogoutButton } from "./_components/LogoutButton";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +23,10 @@ export default function RootLayout({
           <a href="/" className="text-sm text-gray-400 hover:text-white transition-colors">總覽</a>
           <a href="/income" className="text-sm text-gray-400 hover:text-white transition-colors">收入</a>
           <a href="/expense" className="text-sm text-gray-400 hover:text-white transition-colors">支出</a>
-          <div className="ml-auto text-xs text-gray-600">職涯停看聽</div>
+          <div className="ml-auto flex items-center gap-4">
+            <span className="text-xs text-gray-600">職涯停看聽</span>
+            <LogoutButton />
+          </div>
         </nav>
         <main className="max-w-5xl mx-auto px-6 py-8">
           {children}

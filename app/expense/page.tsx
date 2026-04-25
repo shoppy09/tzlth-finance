@@ -15,7 +15,9 @@ const CATEGORIES = [
 export default function ExpensePage() {
   const [transactions, setTransactions] = useState<ExpenseTransaction[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
@@ -29,10 +31,13 @@ export default function ExpensePage() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(false)
     const res = await fetch('/api/expense')
     if (res.ok) {
       const data = await res.json()
       setTransactions(data.transactions ?? [])
+    } else {
+      setLoadError(true)
     }
     setLoading(false)
   }, [])
@@ -42,6 +47,7 @@ export default function ExpensePage() {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
+    setSaveError('')
     const res = await fetch('/api/expense', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -51,6 +57,8 @@ export default function ExpensePage() {
       setShowForm(false)
       setForm({ date: new Date().toISOString().slice(0, 10), amount: '', category: 'platform', description: '', recurring: false, recurring_frequency: 'monthly', note: '' })
       await load()
+    } else {
+      setSaveError('儲存失敗，請重試（GitHub API 異常）')
     }
     setSaving(false)
   }
@@ -117,6 +125,7 @@ export default function ExpensePage() {
             <label className="text-xs text-gray-400 block mb-1">備註</label>
             <input type="text" value={form.note} onChange={e => setForm({...form, note: e.target.value})} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" placeholder="（選填）" />
           </div>
+          {saveError && <p className="text-red-400 text-sm">{saveError}</p>}
           <div className="flex gap-3">
             <button type="submit" disabled={saving} className="bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
               {saving ? '儲存中...' : '確認新增'}
@@ -128,6 +137,8 @@ export default function ExpensePage() {
 
       {loading ? (
         <div className="text-gray-500 text-sm">載入中...</div>
+      ) : loadError ? (
+        <div className="text-red-400 text-sm text-center py-12">⚠️ 資料載入失敗，請重新整理頁面</div>
       ) : transactions.length === 0 ? (
         <div className="text-gray-500 text-sm text-center py-12">還沒有支出記錄，點「+ 新增支出」開始記帳</div>
       ) : (
