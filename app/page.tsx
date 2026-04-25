@@ -1,4 +1,4 @@
-import { computeMonthlySummary } from '@/lib/github'
+import { computeMonthlySummary, getSubscriptions } from '@/lib/github'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
@@ -16,7 +16,21 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
 
   const isYear = view === 'year'
   const period = isYear ? currentYear : currentMonth
-  const summary = await computeMonthlySummary(period)
+  const [summary, subData] = await Promise.all([
+    computeMonthlySummary(period),
+    getSubscriptions(),
+  ])
+
+  // Subscriptions expiring within 30 days
+  const todayMs = new Date().setHours(0, 0, 0, 0)
+  const expiringSoon = subData.subscriptions
+    .filter(s => s.status === 'active' && s.renewal_date !== null)
+    .map(s => {
+      const days = Math.ceil((new Date(s.renewal_date!).getTime() - todayMs) / (1000 * 60 * 60 * 24))
+      return { ...s, days }
+    })
+    .filter(s => s.days <= 30)
+    .sort((a, b) => a.days - b.days)
 
   const netColor = summary.net >= 0 ? 'text-green-400' : 'text-red-400'
   const periodLabel = isYear ? `${currentYear} 年度` : `${currentMonth.replace('-', ' 年 ')} 月`
@@ -52,6 +66,22 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         <KpiCard label="支出" value={fmt(summary.expense_total)} sub={`${summary.transactions.expense_count} 筆`} color="text-orange-400" />
         <KpiCard label="淨利" value={fmt(summary.net)} sub={summary.net >= 0 ? '盈餘' : '虧損（建置期正常）'} color={netColor} />
       </div>
+
+      {/* Expiring Soon */}
+      {expiringSoon.length > 0 && (
+        <div className="bg-yellow-900/20 border border-yellow-700/40 rounded-xl p-4">
+          <h2 className="text-sm font-semibold text-yellow-400 mb-2">⚠️ 訂閱即將到期（30 天內）</h2>
+          <div className="space-y-1">
+            {expiringSoon.map(s => (
+              <div key={s.id} className="flex items-center gap-3 text-sm">
+                <span className="text-white">{s.name}</span>
+                <span className="text-yellow-400 text-xs">{s.renewal_date}</span>
+                <span className="text-gray-500 text-xs">{s.days <= 0 ? '已到期' : `還有 ${s.days} 天`}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick Links */}
       <div className="grid grid-cols-2 gap-4">

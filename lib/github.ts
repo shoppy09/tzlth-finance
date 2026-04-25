@@ -29,6 +29,23 @@ export interface ExpenseTransaction {
   created_at: string
 }
 
+export interface Subscription {
+  id: string              // SUB-YYYYMMDD-001
+  name: string            // 工具名稱
+  category: 'ai' | 'platform' | 'domain' | 'tool' | 'storage' | 'other'
+  type: 'paid' | 'free' | 'trial'
+  cost: number            // NT$，免費 = 0
+  billing_cycle: 'monthly' | 'yearly' | 'one-time' | 'free'
+  renewal_date: string | null   // YYYY-MM-DD，月費自動扣 = null
+  status: 'active' | 'cancelled' | 'paused'
+  watch_pricing: boolean  // 免費但監控定價異動
+  url: string
+  note: string
+  created_at: string
+}
+
+export interface SubscriptionList { subscriptions: Subscription[] }
+
 export interface IncomeLedger { transactions: IncomeTransaction[] }
 export interface ExpenseLedger { transactions: ExpenseTransaction[] }
 
@@ -89,6 +106,16 @@ export async function saveIncomeLedger(ledger: IncomeLedger, year?: number): Pro
 export async function saveExpenseLedger(ledger: ExpenseLedger, year?: number): Promise<boolean> {
   const path = getExpensePath(year ?? new Date().getFullYear())
   return writeJsonFile(path, ledger, `finance: update expense ledger ${new Date().toISOString().slice(0, 10)}`)
+}
+
+const SUBSCRIPTIONS_PATH = 'finance/ledger/subscriptions.json'
+
+export async function getSubscriptions(): Promise<SubscriptionList> {
+  return readJsonFile<SubscriptionList>(SUBSCRIPTIONS_PATH, { subscriptions: [] })
+}
+
+export async function saveSubscriptions(data: SubscriptionList): Promise<boolean> {
+  return writeJsonFile(SUBSCRIPTIONS_PATH, data, `finance: update subscriptions ${new Date().toISOString().slice(0, 10)}`)
 }
 
 // Summary for /api/summary (used by HQ dashboard)
