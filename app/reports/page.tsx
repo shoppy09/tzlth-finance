@@ -24,17 +24,12 @@ export default async function ReportsPage() {
     Promise.all(years.map(y => getExpenseLedger(y))),
   ])
 
-  const incomeByYear: Record<number, typeof incomeData[0]> = {}
-  const expenseByYear: Record<number, typeof expenseData[0]> = {}
-  years.forEach((y, i) => {
-    incomeByYear[y] = incomeData[i]
-    expenseByYear[y] = expenseData[i]
-  })
+  const allInc = incomeData.flatMap(d => d.transactions)
+  const allExp = expenseData.flatMap(d => d.transactions)
 
   const rows = months.map(month => {
-    const year = parseInt(month.slice(0, 4))
-    const inc = incomeByYear[year]?.transactions.filter(t => t.date.startsWith(month)) ?? []
-    const exp = expenseByYear[year]?.transactions.filter(t => t.date.startsWith(month)) ?? []
+    const inc = allInc.filter(t => t.date.startsWith(month))
+    const exp = allExp.filter(t => t.date.startsWith(month))
     const income_received = inc.filter(t => t.status === 'received').reduce((s, t) => s + t.amount, 0)
     const income_pending = inc.filter(t => t.status === 'pending').reduce((s, t) => s + t.amount, 0)
     const expense_total = exp.reduce((s, t) => s + t.amount, 0)
