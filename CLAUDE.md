@@ -4,7 +4,7 @@
 - **系統名稱**：財務系統
 - **短代號**：財務
 - **Vercel URL**：https://tzlth-finance.vercel.app
-- **自定網域**：https://finance.careerssl.com（Cloudflare CNAME 待設定）
+- **自定網域**：https://finance.careerssl.com（CNAME 已設定 2026-04-30）
 - **GitHub repo**：shoppy09/tzlth-finance
 - **本地路徑**：C:\Users\USER\Desktop\CLAUDE寫工具\tzlth-finance
 - **資料位置**：shoppy09/tzlth-hq / finance/ledger/
@@ -110,13 +110,17 @@ GET /api/summary?month=2026-04
 3. **`/api/summary` 無 auth**：設計為公開 endpoint，讓儀表板可跨域呼叫
 4. **PIN auth 不使用 JWT**：無多用戶需求，BASE64 + ACCESS_PIN 驗證已足夠
 
-## Phase 2 計畫
-- `app/reports/page.tsx`：月報頁面 + 現金流時間軸
-- HQ 儀表板 FinancePanel 整合（呼叫 `/api/summary` 替代 parseFinanceReport）
-- RCF-009 整合：顯示預約系統待確認收入
+## Phase 2 計畫（✅ 已全數完成，2026-07-06 盤點補記）
+- `app/reports/page.tsx`：月報頁面 ✅（2026-04-25 v3）
+- HQ 儀表板 FinancePanel 整合 ✅（2026-05-24 驗收）
+- RCF-009 整合：預約系統每日收入區塊 ✅（2026-04-25 v5）
+
+## ⚠️ 文件分工（2026-07-06 起）
+本 repo CLAUDE.md 只記「系統架構＋本 repo 程式碼變更」；**營運層記錄（帳務規則/client_code/月報流程）以 `tzlth-hq/finance/CLAUDE.md` 為 SoT**，系統狀態以 `tzlth-hq/hr/inventory.json` SYS-09 為準——避免雙軌漂移（全系統盤點 G-09-1）。
 
 ## 最近修改記錄
 
 | 日期 | 修改內容 | 狀態 |
 |------|---------|------|
+| 2026-07-06 | 全系統盤點 G-09-1 修正：Phase 2 三項補標 ✅（實際 4-5 月已完成，文件停滯 72 天）＋ CNAME 記載更新＋新增「文件分工」節（營運層指針化到 tzlth-hq，杜絕雙軌）。程式碼近況：Next.js 16.2.6（05-14 CVE 修補）、訂閱功能 subscriptions.json（04-25）| ✅ |
 | 2026-04-25 | 系統建立（Phase 1）：lib/github.ts + lib/auth.ts + middleware + API routes + UI pages；Vercel 部署 https://tzlth-finance.vercel.app | ✅ |
