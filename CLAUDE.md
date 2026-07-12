@@ -124,3 +124,7 @@ GET /api/summary?month=2026-04
 |------|---------|------|
 | 2026-07-06 | 全系統盤點 G-09-1 修正：Phase 2 三項補標 ✅（實際 4-5 月已完成，文件停滯 72 天）＋ CNAME 記載更新＋新增「文件分工」節（營運層指針化到 tzlth-hq，杜絕雙軌）。程式碼近況：Next.js 16.2.6（05-14 CVE 修補）、訂閱功能 subscriptions.json（04-25）| ✅ |
 | 2026-04-25 | 系統建立（Phase 1）：lib/github.ts + lib/auth.ts + middleware + API routes + UI pages；Vercel 部署 https://tzlth-finance.vercel.app | ✅ |
+
+## 收尾七件事（每次對話結束前必做）
+收尾完整規則詳見**總部 CLAUDE.md →「核心原則零：收尾七件事」**（7 步驟：git push / 最近修改記錄 / tasks.md / inventory.json / daily-log / reflection-log / 品質自查 HARD STOP / 未完成清單 HARD STOP，均對總部檔案執行）。
+> 部署特例：本 repo 修改後 build → push → `npx vercel --prod`（規則零三步驟）。
