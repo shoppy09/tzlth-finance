@@ -12,7 +12,7 @@
 
 ## 技術棧
 - **框架**：Next.js 16 App Router
-- **部署**：Vercel（手動 npx vercel --prod，GitHub 自動部署停用）
+- **部署**：Vercel｜🔴 **2026-08-23 dashboard 實查更正：auto-deploy 是「開啟」的**（Deployments 證 git-source 部署存在，`a525904` 純 docs commit 亦自動部署）⇒ **push 即上線**；原記「GitHub 自動部署停用」與實際不符（總部規則零的全域「永久停用」為誤通則，見 RCF-153）
 - **資料庫**：GitHub-as-database（tzlth-hq repo，GitHub API 讀寫 JSON）
 - **認證**：PIN-based httpOnly cookie（7 天，verifyToken BASE64 驗證）
 - **UI**：Tailwind CSS（gray-950 深色主題）
@@ -75,10 +75,12 @@ tzlth-hq/finance/ledger/
 
 ## 部署流程（不可更改）
 ```
-步驟 1：npm run build        ← 必須通過才繼續
-步驟 2：git push             ← 版本控制（不觸發部署）
-步驟 3：npx vercel --prod    ← 唯一合法部署方式
+步驟 1：npm run build        ← 必須通過才繼續（⛔ 更不能跳過，見下）
+步驟 2：git push             ← **會觸發 auto-deploy 上線**（2026-08-23 實查更正）
+步驟 3：npx vercel --prod    ← 加速/備援（非唯一途徑）
 ```
+> ⛔ **`npm run build` 為 HARD STOP**：本 repo 是 Next.js，build 失敗時 Vercel **靜默保留舊版**只寄信通知 ⇒ 不 build 就 push 會以為上線了其實沒有。
+> ⚠️ 本機 Vercel 憑證已於 2026-08-15～08-22 間消失（`No existing credentials found`），待 Tim `vercel login`；本 repo 因 auto-deploy 開啟不受影響。
 
 ## 公開 API：/api/summary
 HQ 儀表板呼叫此端點取得財務摘要，無需認證：
@@ -127,4 +129,4 @@ GET /api/summary?month=2026-04
 
 ## 收尾七件事（每次對話結束前必做）
 收尾完整規則詳見**總部 CLAUDE.md →「核心原則零：收尾七件事」**（7 步驟：git push / 最近修改記錄 / tasks.md / inventory.json / daily-log / reflection-log / 品質自查 HARD STOP / 未完成清單 HARD STOP，均對總部檔案執行）。
-> 部署特例：本 repo 修改後 build → push → `npx vercel --prod`（規則零三步驟）。
+> 部署特例：本 repo 修改後 build → push（**push 即 auto-deploy 上線**，2026-08-23 實查）→ `npx vercel --prod` 為加速/備援。
