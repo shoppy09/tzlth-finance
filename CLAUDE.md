@@ -14,7 +14,7 @@
 - **框架**：Next.js 16 App Router
 - **部署**：Vercel｜🔴 **2026-08-23 dashboard 實查更正：auto-deploy 是「開啟」的**（Deployments 證 git-source 部署存在，`a525904` 純 docs commit 亦自動部署）⇒ **push 即上線**；原記「GitHub 自動部署停用」與實際不符（總部規則零的全域「永久停用」為誤通則，見 RCF-153）
 - **資料庫**：GitHub-as-database（tzlth-hq repo，GitHub API 讀寫 JSON）
-- **認證**：PIN-based httpOnly cookie（7 天，verifyToken BASE64 驗證）
+- **認證**：PIN-based httpOnly cookie（7 天）｜⚠️ **2026-08-31 更正**：原記「verifyToken **BASE64** 驗證」為 stale——`lib/auth.ts` L1 逐字 `[安全修復 2026-05-14] PIN-based auth utilities — HMAC token (replacing insecure Base64)`，現況為 **HMAC-SHA256 ＋ timestamp 過期檢查 ＋ `crypto.timingSafeEqual` 常數時間比較**。⛔ **本 repo 為 public**，一份描述自身認證為 BASE64 的文件對外等同攻擊指引（實際已非如此，但文件本身是誤導）。（tzlth-hq tasks L788 橫向掃描揪出）
 - **UI**：Tailwind CSS（gray-950 深色主題）
 
 ## 環境變數（Vercel 必填）
