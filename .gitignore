@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ⛔ 例外：範本檔必須進版控（值全空，RCF-111 只記名不記值）。
+#    2026-09-16：.env* 原本把 .env.example 一起擋掉 ⇒ 建了也上不了 GitHub。
+!.env.example
 
 # vercel
 .vercel
