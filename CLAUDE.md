@@ -183,7 +183,7 @@ Authorization: Bearer <SUMMARY_API_KEY>
 
 | 日期 | 修改內容 | 狀態 |
 |------|---------|------|
-| 2026-09-28 | 【DEV/FIN】**三項（HQ tasks L905／L178／L586，RCF-206）**：① income 加選填 `platform` 欄（POST 白名單＋表單下拉＋CSV 匯出）；② 首頁加「本月尚未入帳的月費訂閱」（月費型 `renewal_date=null`，原 30 天到期警示結構上觸發不了）；③ 新增公開 `/api/version`。路由表 15→16 handler、`/api/expense` 註明改金額＝刪掉重建 | ✅ |
+| 2026-09-28 | 【DEV/FIN】**三項（HQ tasks L905／L178／L586，RCF-206）**：① income 加選填 `platform` 欄（POST 白名單＋表單下拉＋CSV 匯出）；② 首頁加「本月尚未入帳的月費訂閱」（月費型 `renewal_date=null`，原 30 天到期警示結構上觸發不了）；③ 新增公開 `/api/version`。路由表 15→16 handler、`/api/expense` 註明改金額＝刪掉重建。詳 `CLAUDE-archive-2026-09.md` | ✅ |
 | 2026-09-24 | 【DEV】新增 `.gitattributes`：文字檔一律以 LF 存入 repo、二進位檔明列不轉換（總部批次:B28／RCF-198 統一推送）。本 repo renormalize 零檔變動（index 原本即全為 LF）；零程式碼改動 | ✅ |
 | 2026-09-16 | 🔴 **文件層全覆蓋修正**（tzlth-hq tasks L51 說明書 pilot 第 2 樣本）：① `/api/summary` 由「公開，無需 auth」更正為 **API key（Bearer）**——本 repo 為 public，該錯誤描述對外等同攻擊指引；② 設計決策 #4 仍寫「BASE64」→ HMAC-SHA256（**2026-08-31 同類修正的漏網句**，同檔不同節）；③ 路由表 8 列 → 機器重生成（6 頁面＋15 handler，補 `/reports` `/subscriptions` `/api/export` `/api/subscriptions` `/api/auth/logout`、補 `/api/income` PATCH）；④ env 3 → **5 把**（補 `SUMMARY_API_KEY`，2026-05-14 即設定卻從未登記）；⑤ 資料結構補 `subscriptions.json` 與日收檔；⑥ 新增安全設定節（原零記載）。⚠️ 零 `.ts` 改動。詳見 tzlth-hq `projects/SYS-09-finance.md` | ✅ |
 | 2026-07-06 | 全系統盤點 G-09-1 修正：Phase 2 三項補標 ✅（實際 4-5 月已完成，文件停滯 72 天）＋ CNAME 記載更新＋新增「文件分工」節（營運層指針化到 tzlth-hq，杜絕雙軌）。程式碼近況：Next.js 16.2.6（05-14 CVE 修補）、訂閱功能 subscriptions.json（04-25）| ✅ |
