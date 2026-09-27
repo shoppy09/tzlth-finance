@@ -57,6 +57,7 @@ tzlth-hq/finance/
   client_code: string    // C-YYYYMM-NNN
   service_type: string   // S0/S4/S6/企業包案/課程/電子書/其他
   payment_method: string // transfer/cash/other
+  platform?: string     // 成交平台 direct/vocus/portaly/buymeacoffee/other；舊筆無此欄＝direct（2026-09-28，HQ RCF-206）
   status: string         // received/pending
   note: string
   created_at: string     // ISO 8601
@@ -93,16 +94,17 @@ tzlth-hq/finance/
 | `/subscriptions` | 訂閱與工具資產管理 | 需要 |
 | `/login` | PIN 登入頁 | 公開 |
 
-### API（7 檔／**15 handler**）
+### API（8 檔／**16 handler**）
 | 路由 | Method | 說明 | 認證 |
 |------|--------|------|------|
 | `/api/auth/login` | POST | 驗 PIN → 發 HMAC cookie | 公開 |
 | `/api/auth/logout` | POST | 清除 cookie | cookie |
 | `/api/income` | GET / POST / **PATCH** / DELETE | 讀 / 新增 / **改狀態（待收⇄已收）** / 刪除 | cookie |
-| `/api/expense` | GET / POST / DELETE | 讀 / 新增 / 刪除（⚠️ **無 PATCH**）| cookie |
+| `/api/expense` | GET / POST / DELETE | 讀 / 新增 / 刪除（⚠️ **無 PATCH**：改金額＝刪掉重建。2026-09-28 Tim 裁決不補——18 筆支出、5 個月來每次修正皆走刪除重建，無卡住實例）| cookie |
 | `/api/subscriptions` | GET / POST / PATCH / DELETE | 訂閱 CRUD（PATCH 為部分更新）| cookie |
 | `/api/export` | GET | CSV 匯出（`?year=&type=income\|expense`，含 UTF-8 BOM）| cookie |
 | `/api/summary` | GET | 月份彙總（供儀表板）| **API key（見下）** |
+| `/api/version` | GET | 部署自報 `{commit 7 碼, node 大版本, region}`，供 push 後驗收（2026-09-28）| **公開**（middleware 精確路徑放行；⛔ 不得加入任何財務數字或 env）|
 
 ## 部署流程（不可更改）
 ```
@@ -181,6 +183,7 @@ Authorization: Bearer <SUMMARY_API_KEY>
 
 | 日期 | 修改內容 | 狀態 |
 |------|---------|------|
+| 2026-09-28 | 【DEV/FIN】**三項（HQ tasks L905／L178／L586，RCF-206）**：① income 加選填 `platform` 欄（POST 白名單＋表單下拉＋CSV 匯出）；② 首頁加「本月尚未入帳的月費訂閱」（月費型 `renewal_date=null`，原 30 天到期警示結構上觸發不了）；③ 新增公開 `/api/version`。路由表 15→16 handler、`/api/expense` 註明改金額＝刪掉重建 | ✅ |
 | 2026-09-24 | 【DEV】新增 `.gitattributes`：文字檔一律以 LF 存入 repo、二進位檔明列不轉換（總部批次:B28／RCF-198 統一推送）。本 repo renormalize 零檔變動（index 原本即全為 LF）；零程式碼改動 | ✅ |
 | 2026-09-16 | 🔴 **文件層全覆蓋修正**（tzlth-hq tasks L51 說明書 pilot 第 2 樣本）：① `/api/summary` 由「公開，無需 auth」更正為 **API key（Bearer）**——本 repo 為 public，該錯誤描述對外等同攻擊指引；② 設計決策 #4 仍寫「BASE64」→ HMAC-SHA256（**2026-08-31 同類修正的漏網句**，同檔不同節）；③ 路由表 8 列 → 機器重生成（6 頁面＋15 handler，補 `/reports` `/subscriptions` `/api/export` `/api/subscriptions` `/api/auth/logout`、補 `/api/income` PATCH）；④ env 3 → **5 把**（補 `SUMMARY_API_KEY`，2026-05-14 即設定卻從未登記）；⑤ 資料結構補 `subscriptions.json` 與日收檔；⑥ 新增安全設定節（原零記載）。⚠️ 零 `.ts` 改動。詳見 tzlth-hq `projects/SYS-09-finance.md` | ✅ |
 | 2026-07-06 | 全系統盤點 G-09-1 修正：Phase 2 三項補標 ✅（實際 4-5 月已完成，文件停滯 72 天）＋ CNAME 記載更新＋新增「文件分工」節（營運層指針化到 tzlth-hq，杜絕雙軌）。程式碼近況：Next.js 16.2.6（05-14 CVE 修補）、訂閱功能 subscriptions.json（04-25）| ✅ |

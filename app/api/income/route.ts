@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
     client_code: body.client_code ?? '',
     service_type: body.service_type ?? '',
     payment_method: body.payment_method ?? 'transfer',
+    platform: body.platform ?? 'direct',
     status: body.status ?? 'received',
     note: body.note ?? '',
     created_at: new Date().toISOString(),

@@ -13,6 +13,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // /api/version：公開部署自報（commit 7 碼／node 大版本／region），見該 route 檔頭（2026-09-28）
+  if (pathname === '/api/version') {
+    return NextResponse.next()
+  }
+
   // /api/summary has its own auth (API key) — let it through to the route handler
   if (pathname.startsWith('/api/summary')) {
     return NextResponse.next()

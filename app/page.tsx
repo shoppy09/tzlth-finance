@@ -1,4 +1,4 @@
-import { computeMonthlySummary, getSubscriptions, getDailyRevenue } from '@/lib/github'
+import { computeMonthlySummary, getSubscriptions, getDailyRevenue, getExpenseLedger } from '@/lib/github'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
@@ -16,11 +16,28 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
 
   const isYear = view === 'year'
   const period = isYear ? currentYear : currentMonth
-  const [summary, subData, dailyRevenue] = await Promise.all([
+  const [summary, subData, dailyRevenue, expenseLedger] = await Promise.all([
     computeMonthlySummary(period),
     getSubscriptions(),
     getDailyRevenue(currentMonth),
+    getExpenseLedger(),
   ])
+
+  // 本月尚未入帳的月費訂閱（2026-09-28 HQ tasks L178）
+  // WHY：上方「30 天內到期」只看 renewal_date，而月費自動扣款的訂閱 renewal_date＝null ⇒ 結構上永遠不觸發。
+  //   2026-07～09 Claude Code 月費因此漏記 2 個月（HQ tasks L119）。改以「本月 expense 有沒有這筆」判斷。
+  // 比對鍵：expense.description 含訂閱名稱（實際資料「Claude Code Max 5x」含「Claude Code Max」）。
+  // 過了「上次入帳日（日）」才提醒，避免每月 1～3 日對 4 日扣款的訂閱誤報。
+  const dayOfMonth = today.getDate()
+  const unpaidMonthly = isYear ? [] : subData.subscriptions
+    .filter(s => s.status === 'active' && s.billing_cycle === 'monthly' && s.cost > 0)
+    .filter(s => !expenseLedger.transactions.some(t => t.date.startsWith(currentMonth) && t.description.includes(s.name)))
+    .filter(s => {
+      const days = expenseLedger.transactions
+        .filter(t => t.description.includes(s.name))
+        .map(t => Number(t.date.slice(8, 10)))
+      return days.length === 0 || dayOfMonth >= Math.max(...days)
+    })
 
   // Subscriptions expiring within 30 days
   const todayMs = new Date().setHours(0, 0, 0, 0)
@@ -109,6 +126,22 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Unpaid monthly subscriptions */}
+      {unpaidMonthly.length > 0 && (
+        <div className="bg-yellow-900/20 border border-yellow-700/40 rounded-xl p-4">
+          <h2 className="text-sm font-semibold text-yellow-400 mb-2">⚠️ 本月尚未入帳的月費訂閱</h2>
+          <div className="space-y-1">
+            {unpaidMonthly.map(s => (
+              <div key={s.id} className="flex items-center gap-3 text-sm">
+                <span className="text-white">{s.name}</span>
+                <span className="text-gray-500 text-xs">預估 {fmt(s.cost)}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-600 mt-2">以信用卡實扣金額至「支出」頁新增；說明欄請包含訂閱名稱，本提醒才會消失</p>
         </div>
       )}
 

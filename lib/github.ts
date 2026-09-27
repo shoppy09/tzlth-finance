@@ -12,6 +12,7 @@ export interface IncomeTransaction {
   client_code: string   // e.g. C-202604-001
   service_type: string  // S0/S4/S6/其他
   payment_method: string // transfer/cash/other
+  platform?: string     // 成交平台 direct/vocus/portaly/buymeacoffee/other；舊筆無此欄＝direct（2026-09-28 RCF-206）
   status: string        // received/pending
   note: string
   created_at: string

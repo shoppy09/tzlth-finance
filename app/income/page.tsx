@@ -7,6 +7,9 @@ import { DeleteModal } from '@/app/_components/DeleteModal'
 const SERVICE_TYPES = ['S0', 'S4', 'S6', '企業包案', '課程', '電子書', '其他']
 const PAYMENT_METHODS = ['transfer', 'cash', 'other']
 const PAYMENT_LABELS: Record<string, string> = { transfer: '轉帳', cash: '現金', other: '其他' }
+// 成交平台（2026-09-28 RCF-206）：「怎麼付」看付款方式，「在哪成交」看這裡；平台成交金額記實收淨額（月底結帳 G17）
+const PLATFORMS = ['direct', 'vocus', 'portaly', 'buymeacoffee', 'other']
+const PLATFORM_LABELS: Record<string, string> = { direct: '直接', vocus: '方格子', portaly: 'Portaly', buymeacoffee: 'Buy Me a Coffee', other: '其他平台' }
 
 export default function IncomePage() {
   const [transactions, setTransactions] = useState<IncomeTransaction[]>([])
@@ -23,6 +26,7 @@ export default function IncomePage() {
     client_code: '',
     service_type: 'S4',
     payment_method: 'transfer',
+    platform: 'direct',
     status: 'received',
     note: '',
   })
@@ -53,7 +57,7 @@ export default function IncomePage() {
     })
     if (res.ok) {
       setShowForm(false)
-      setForm({ date: new Date().toISOString().slice(0, 10), amount: '', client_code: '', service_type: 'S4', payment_method: 'transfer', status: 'received', note: '' })
+      setForm({ date: new Date().toISOString().slice(0, 10), amount: '', client_code: '', service_type: 'S4', payment_method: 'transfer', platform: 'direct', status: 'received', note: '' })
       await load()
     } else {
       setSaveError('儲存失敗，請重試（GitHub API 異常）')
@@ -166,6 +170,12 @@ export default function IncomePage() {
               </select>
             </div>
             <div>
+              <label className="text-xs text-gray-400 block mb-1">成交平台</label>
+              <select value={form.platform} onChange={e => setForm({...form, platform: e.target.value})} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
+                {PLATFORMS.map(m => <option key={m} value={m}>{PLATFORM_LABELS[m]}</option>)}
+              </select>
+            </div>
+            <div>
               <label className="text-xs text-gray-400 block mb-1">狀態</label>
               <select value={form.status} onChange={e => setForm({...form, status: e.target.value})} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
                 <option value="received">已收款</option>
@@ -205,7 +215,7 @@ export default function IncomePage() {
                 {t.client_code && <span className="text-gray-500 text-xs ml-2">{t.client_code}</span>}
                 {t.note && <span className="text-gray-500 text-xs ml-2">· {t.note}</span>}
               </div>
-              <div className="text-xs text-gray-500">{PAYMENT_LABELS[t.payment_method] ?? t.payment_method}</div>
+              <div className="text-xs text-gray-500">{PAYMENT_LABELS[t.payment_method] ?? t.payment_method}{t.platform && t.platform !== 'direct' && ` · ${PLATFORM_LABELS[t.platform] ?? t.platform}`}</div>
               <div className={`text-sm font-semibold w-20 text-right ${t.status === 'received' ? 'text-green-400' : 'text-yellow-400'}`}>
                 NT${t.amount.toLocaleString()}
               </div>

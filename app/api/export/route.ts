@@ -18,9 +18,9 @@ export async function GET(req: NextRequest) {
 
   if (type === 'income') {
     const ledger = await getIncomeLedger(year)
-    const header = 'ID,日期,金額,客戶代號,服務類型,付款方式,狀態,備註'
+    const header = 'ID,日期,金額,客戶代號,服務類型,付款方式,成交平台,狀態,備註'
     const rows = ledger.transactions.map(t =>
-      `${t.id},${t.date},${t.amount},${t.client_code},${t.service_type},${t.payment_method},${t.status},"${t.note.replace(/"/g, '""')}"`)
+      `${t.id},${t.date},${t.amount},${t.client_code},${t.service_type},${t.payment_method},${t.platform ?? 'direct'},${t.status},"${t.note.replace(/"/g, '""')}"`)
     const csv = BOM + [header, ...rows].join('\n')
     return new NextResponse(csv, {
       headers: {
