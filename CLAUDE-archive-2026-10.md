@@ -1,0 +1,7 @@
+# CLAUDE.md 修改記錄全文封存（2026-10）
+
+> RCF-175 雙層制（總部 CLAUDE.md 規則）：主檔 `CLAUDE.md`「最近修改記錄」只放 ≤300 字元摘要列，完整敘事在此。newest-first。
+
+| 日期 | 修改內容 | 狀態 |
+|------|---------|------|
+| 2026-10-10 | 【DEV/FIN】**寫入失敗時不再整份覆蓋帳本（HQ tasks「寫入失敗審查結果（10-08）」⑥，H 組；Tim「按照你的建議，執行」，查照 4 版）**：① **根因**：`readJsonFile` 讀帳本遇任何非 2xx 都回空帳本，`writeJsonFile` 寫入前另抓一次 sha ⇒ 讀失敗而 sha 抓得到時，新增／刪除／標已收會用「空帳本＋本次變更」覆蓋整年帳本並回成功；兩邊同時寫入時後寫蓋前寫、不會 409（Claude 月底結帳直接 git 改帳本也是寫入者）。本機以 HEAD 版程式重現：讀 500 → save 回 true、PUT 帶 sha、寫入只剩 1 筆。② **修法**：照 hq-dashboard `lib/github.ts` `setChecklistKey`（本檔頭本來就寫 Pattern same as hq-dashboard）——新增 `readStrict`（只有 404 當「檔案還不存在」，其餘拋 `LedgerReadError`）＋`updateJsonFile`（sha 取自同一次讀取；409／422 時整段「讀 → 改 → 寫」重做一次，編號依新資料重算；`mutate` 回 null＝不寫入）；移除 `getFileSha`／`writeJsonFile`／`save*`。三支 API（income／expense／subscriptions）GET／POST／PATCH／DELETE 全改用，錯誤對應 503（讀失敗）／409（衝突）／502（寫失敗）；刪除或標記不存在的筆回 404（原本會照樣寫一次）。列表頁 GET 讀失敗改回 503 ⇒ 前端既有「⚠️ 資料載入失敗」畫面首次能出現（原本 API 永遠回 200 空清單，那段是死碼）。前端刪除／標已收 4 處補 `actionError` 紅字。首頁／報表／`/api/summary`／匯出仍用寬鬆讀取（只顯示不寫回；`/api/summary` 為儀表板消費者，刻意不動）。③ **驗證**：node 24 直接載入真的 `lib/github.ts`、只換 `fetch`，11 情境全過（404 建檔／500 與 403 不送 PUT／409 重做且 sha 取自第二次讀取／連兩次 409／422 後 PUT 500／不存在不寫／正常保留原資料／列表嚴格讀取／唯讀路徑不變／空帳本不共用）；`npm run build` 通過；`npm run lint` 前後同為 7 項既有問題（行號 +1，無新增）。④ `.gitattributes`：`* text=auto` 移到二進位規則前（總部 tasks「其餘 8 個 repo 的 .gitattributes 規則順序」），`git check-attr` pdf＝unset、ts＝set；`git ls-files --eol` 除 favicon 外皆 i/lf，無重新正規化 | ✅ |

@@ -38,6 +38,7 @@ export default function SubscriptionsPage() {
   const [loadError, setLoadError] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [actionError, setActionError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null)
   const [form, setForm] = useState({
@@ -88,7 +89,12 @@ export default function SubscriptionsPage() {
   }
 
   async function handleDelete(id: string) {
-    await fetch('/api/subscriptions', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    setActionError('')
+    const res = await fetch('/api/subscriptions', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      setActionError(`刪除訂閱失敗（${d.error ?? 'HTTP ' + res.status}），請重新整理確認後再試`)
+    }
     setDeleteTarget(null)
     await load()
   }
@@ -197,6 +203,8 @@ export default function SubscriptionsPage() {
           </div>
         </form>
       )}
+
+      {actionError && <div className="text-red-400 text-sm">⚠️ {actionError}</div>}
 
       {loading ? (
         <div className="text-gray-500 text-sm">載入中...</div>

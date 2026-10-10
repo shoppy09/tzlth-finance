@@ -14,6 +14,7 @@
 - **框架**：Next.js 16 App Router
 - **部署**：Vercel｜🔴 **2026-08-23 dashboard 實查更正：auto-deploy 是「開啟」的**（Deployments 證 git-source 部署存在，`a525904` 純 docs commit 亦自動部署）⇒ **push 即上線**；原記「GitHub 自動部署停用」與實際不符（總部規則零的全域「永久停用」為誤通則，見 RCF-153）
 - **資料庫**：GitHub-as-database（tzlth-hq repo，GitHub API 讀寫 JSON）
+  - ⛔ **寫入一律走 `lib/github.ts` 的 `update*`（2026-10-10，HQ「寫入失敗審查結果（10-08）」⑥）**：只有 404 當「檔案還不存在」、其他讀取失敗一律拋錯不寫；sha 取自同一次讀取、409／422 整段重做一次（同 hq-dashboard `setChecklistKey`）。舊的 `save*`＋另抓 sha 已移除——讀失敗時曾會用「空帳本＋本次變更」覆蓋整年帳本並回成功。列表頁 API 讀失敗回 503（前端顯示「資料載入失敗」）；首頁／報表／`/api/summary`／匯出仍用寬鬆讀取（只顯示、不寫回）
 - **認證**：PIN-based httpOnly cookie（7 天）｜⚠️ **2026-08-31 更正**：原記「verifyToken **BASE64** 驗證」為 stale——`lib/auth.ts` L1 逐字 `[安全修復 2026-05-14] PIN-based auth utilities — HMAC token (replacing insecure Base64)`，現況為 **HMAC-SHA256 ＋ timestamp 過期檢查 ＋ `crypto.timingSafeEqual` 常數時間比較**。⛔ **本 repo 為 public**，一份描述自身認證為 BASE64 的文件對外等同攻擊指引（實際已非如此，但文件本身是誤導）。（tzlth-hq tasks L788 橫向掃描揪出）
 - **UI**：Tailwind CSS（gray-950 深色主題）
 
@@ -183,6 +184,7 @@ Authorization: Bearer <SUMMARY_API_KEY>
 
 | 日期 | 修改內容 | 狀態 |
 |------|---------|------|
+| 2026-10-10 | 【DEV/FIN】**寫入不再可能整份覆蓋帳本（HQ tasks「寫入失敗審查結果（10-08）」⑥）**：`update*` 只把 404 當沒檔、其他讀失敗拋錯；sha 同次讀取＋409 重做；三支 API 回 503／409／502，前端刪除與標已收顯示錯誤；`.gitattributes` 順序。詳 `CLAUDE-archive-2026-10.md` | ✅ |
 | 2026-09-28 | 【DEV/FIN】**三項（HQ tasks L905／L178／L586，RCF-206）**：① income 加選填 `platform` 欄（POST 白名單＋表單下拉＋CSV 匯出）；② 首頁加「本月尚未入帳的月費訂閱」（月費型 `renewal_date=null`，原 30 天到期警示結構上觸發不了）；③ 新增公開 `/api/version`。路由表 15→16 handler、`/api/expense` 註明改金額＝刪掉重建。詳 `CLAUDE-archive-2026-09.md` | ✅ |
 | 2026-09-24 | 【DEV】新增 `.gitattributes`：文字檔一律以 LF 存入 repo、二進位檔明列不轉換（總部批次:B28／RCF-198 統一推送）。本 repo renormalize 零檔變動（index 原本即全為 LF）；零程式碼改動 | ✅ |
 | 2026-09-16 | 🔴 **文件層全覆蓋修正**（tzlth-hq tasks L51 說明書 pilot 第 2 樣本）：① `/api/summary` 由「公開，無需 auth」更正為 **API key（Bearer）**——本 repo 為 public，該錯誤描述對外等同攻擊指引；② 設計決策 #4 仍寫「BASE64」→ HMAC-SHA256（**2026-08-31 同類修正的漏網句**，同檔不同節）；③ 路由表 8 列 → 機器重生成（6 頁面＋15 handler，補 `/reports` `/subscriptions` `/api/export` `/api/subscriptions` `/api/auth/logout`、補 `/api/income` PATCH）；④ env 3 → **5 把**（補 `SUMMARY_API_KEY`，2026-05-14 即設定卻從未登記）；⑤ 資料結構補 `subscriptions.json` 與日收檔；⑥ 新增安全設定節（原零記載）。⚠️ 零 `.ts` 改動。詳見 tzlth-hq `projects/SYS-09-finance.md` | ✅ |
