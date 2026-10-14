@@ -114,6 +114,7 @@ tzlth-hq/finance/
 步驟 3：npx vercel --prod    ← 加速/備援（非唯一途徑）
 ```
 > ⛔ **`npm run build` 為 HARD STOP**：本 repo 是 Next.js，build 失敗時 Vercel **靜默保留舊版**只寄信通知 ⇒ 不 build 就 push 會以為上線了其實沒有。
+> 🔒 **本機 build 閘（2026-10-14 起，總部 L820／RCF-244）**：本 repo 的 `.git/hooks/pre-push` 會比對要推的內容有沒有本機 build 成功的記號；沒有、且工作樹乾淨 → 自動跑 `npm run build`（約 15～30 秒），失敗就擋下 ⇒ **push 指令要給足 timeout（≥300 秒）**。推完查部署結果：`python -X utf8 C:/Users/USER/Desktop/tzlth-hq/scripts/deploy_status.py 財務 --wait`（⚠️ 最多等 10 分鐘，Bash timeout 給 660000）。略過：`TZLTH_SKIP_BUILD_GATE=1 git push`（會記錄、收尾會提醒）。本體與安裝在總部 `scripts/build_gate.py`、`scripts/install_git_hooks.py`；本機 hook 不入版控，換機要重裝。
 > ⚠️ 本機 Vercel 憑證已於 2026-08-15～08-22 間消失（`No existing credentials found`），待 Tim `vercel login`；本 repo 因 auto-deploy 開啟不受影響。
 
 ## 機器介面：/api/summary
@@ -184,6 +185,7 @@ Authorization: Bearer <SUMMARY_API_KEY>
 
 | 日期 | 修改內容 | 狀態 |
 |------|---------|------|
+| 2026-10-14 | 【DEV】**本機 build 閘＋推送後部署結果查詢（總部 L820，RCF-244）**：`.git/hooks/pre-push` 由總部安裝，沒有 build 記號就自動 build、失敗擋下；推完用總部 `deploy_status.py` 查部署結果。本 repo 程式碼未動。說明見部署段 🔒 行 | ✅ |
 | 2026-10-10 | 【DEV/FIN】**寫入不再可能整份覆蓋帳本（HQ tasks「寫入失敗審查結果（10-08）」⑥）**：`update*` 只把 404 當沒檔、其他讀失敗拋錯；sha 同次讀取＋409 重做；三支 API 回 503／409／502，前端刪除與標已收顯示錯誤；`.gitattributes` 順序。詳 `CLAUDE-archive-2026-10.md` | ✅ |
 | 2026-09-28 | 【DEV/FIN】**三項（HQ tasks L905／L178／L586，RCF-206）**：① income 加選填 `platform` 欄（POST 白名單＋表單下拉＋CSV 匯出）；② 首頁加「本月尚未入帳的月費訂閱」（月費型 `renewal_date=null`，原 30 天到期警示結構上觸發不了）；③ 新增公開 `/api/version`。路由表 15→16 handler、`/api/expense` 註明改金額＝刪掉重建。詳 `CLAUDE-archive-2026-09.md` | ✅ |
 | 2026-09-24 | 【DEV】新增 `.gitattributes`：文字檔一律以 LF 存入 repo、二進位檔明列不轉換（總部批次:B28／RCF-198 統一推送）。本 repo renormalize 零檔變動（index 原本即全為 LF）；零程式碼改動 | ✅ |
