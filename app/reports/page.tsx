@@ -1,4 +1,5 @@
 import { getIncomeLedger, getExpenseLedger } from '@/lib/github'
+import { requireAuth } from '@/lib/require-auth'
 
 function fmt(n: number) {
   return `NT$${n.toLocaleString('zh-TW')}`
@@ -15,6 +16,7 @@ function monthsBack(n: number): string[] {
 }
 
 export default async function ReportsPage() {
+  await requireAuth() // 讀帳本前先驗簽（資安稽核 C-1，2026-10-17）
   const months = monthsBack(6)
 
   // Fetch unique years needed

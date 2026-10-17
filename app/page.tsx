@@ -1,4 +1,5 @@
 import { computeMonthlySummary, getSubscriptions, getDailyRevenue, getExpenseLedger } from '@/lib/github'
+import { requireAuth } from '@/lib/require-auth'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
@@ -7,6 +8,7 @@ function fmt(n: number) {
 }
 
 export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
+  await requireAuth() // 讀帳本前先驗簽（資安稽核 C-1，2026-10-17）
   const params = await searchParams
   const view = params.view as string | undefined
 
