@@ -16,11 +16,12 @@
 - **資料庫**：GitHub-as-database（tzlth-hq repo，GitHub API 讀寫 JSON）
   - ⛔ **寫入一律走 `lib/github.ts` 的 `update*`（2026-10-10，HQ「寫入失敗審查結果（10-08）」⑥）**：只有 404 當「檔案還不存在」、其他讀取失敗一律拋錯不寫；sha 取自同一次讀取、409／422 整段重做一次（同 hq-dashboard `setChecklistKey`）。舊的 `save*`＋另抓 sha 已移除——讀失敗時曾會用「空帳本＋本次變更」覆蓋整年帳本並回成功。列表頁 API 讀失敗回 503（前端顯示「資料載入失敗」）；首頁／報表／`/api/summary`／匯出仍用寬鬆讀取（只顯示、不寫回）
 - **認證**：PIN-based httpOnly cookie（7 天）｜⚠️ **2026-08-31 更正**：原記「verifyToken **BASE64** 驗證」為 stale——`lib/auth.ts` L1 逐字 `[安全修復 2026-05-14] PIN-based auth utilities — HMAC token (replacing insecure Base64)`，現況為 **HMAC-SHA256 ＋ timestamp 過期檢查 ＋ `crypto.timingSafeEqual` 常數時間比較**。⛔ **本 repo 為 public**，一份描述自身認證為 BASE64 的文件對外等同攻擊指引（實際已非如此，但文件本身是誤導）。（tzlth-hq tasks L788 橫向掃描揪出）
+  - 🔒 **驗簽位置（2026-10-17 起，HQ 資安稽核 C-1）**：`proxy.ts`（Next 16 由 middleware 更名，跑 Node.js）對所有非公開路徑呼叫 `verifyToken` 完整驗簽；首頁與月報另在頁面內呼叫 `lib/require-auth.ts` 再驗一次（這兩頁是伺服端元件、直接讀帳本）。⛔ 原 `middleware.ts` 跑在 Edge、只驗 token 格式，偽造 cookie 可讀首頁與月報（2026-05-14～10-17）。⛔ **新增直接讀帳本的伺服端頁面，第一行必須 `await requireAuth()`**；放行路徑一律完全相符（`proxy.ts` 的 `PUBLIC_PATHS`），不用 startsWith。⚠️ 已知殘餘：PIN 兼作簽章金鑰、登出不讓 token 在伺服端失效、登入只有錯誤延遲 1 秒（非暴力破解防護）→ 治本待 HQ tasks 批次:B64
 - **UI**：Tailwind CSS（gray-950 深色主題）
 
 ## 環境變數（Vercel 必填）
 
-> ⚠️ **2026-09-16 由 `grep -rn "process.env.[A-Z_]*" app lib middleware.ts next.config.ts` 重新生成**。
+> ⚠️ **2026-09-16 由 `grep -rn "process.env.[A-Z_]*" app lib proxy.ts next.config.ts`（2026-10-17 起 middleware.ts 已更名 proxy.ts） 重新生成**。
 > 原表 3 把，缺 `SUMMARY_API_KEY`（2026-05-14 即已設定，但從未登記）。⛔ 只記變數名與用途，不記值。
 
 | 變數名 | 讀取位置 | 說明 | 未設定的後果 |
@@ -95,17 +96,19 @@ tzlth-hq/finance/
 | `/subscriptions` | 訂閱與工具資產管理 | 需要 |
 | `/login` | PIN 登入頁 | 公開 |
 
+> 「需要」＝`proxy.ts` 完整驗簽（2026-10-17 起）；`/` 與 `/reports` 另在頁面內 `requireAuth()` 再驗一次。
+
 ### API（8 檔／**16 handler**）
 | 路由 | Method | 說明 | 認證 |
 |------|--------|------|------|
 | `/api/auth/login` | POST | 驗 PIN → 發 HMAC cookie | 公開 |
-| `/api/auth/logout` | POST | 清除 cookie | cookie |
+| `/api/auth/logout` | POST | 清除 cookie | **公開**（2026-10-17 起；只刪 cookie，讓過期的人按登出也能回登入頁）|
 | `/api/income` | GET / POST / **PATCH** / DELETE | 讀 / 新增 / **改狀態（待收⇄已收）** / 刪除 | cookie |
 | `/api/expense` | GET / POST / DELETE | 讀 / 新增 / 刪除（⚠️ **無 PATCH**：改金額＝刪掉重建。2026-09-28 Tim 裁決不補——18 筆支出、5 個月來每次修正皆走刪除重建，無卡住實例）| cookie |
 | `/api/subscriptions` | GET / POST / PATCH / DELETE | 訂閱 CRUD（PATCH 為部分更新）| cookie |
 | `/api/export` | GET | CSV 匯出（`?year=&type=income\|expense`，含 UTF-8 BOM）| cookie |
 | `/api/summary` | GET | 月份彙總（供儀表板）| **API key（見下）** |
-| `/api/version` | GET | 部署自報 `{commit 7 碼, node 大版本, region}`，供 push 後驗收（2026-09-28）| **公開**（middleware 精確路徑放行；⛔ 不得加入任何財務數字或 env）|
+| `/api/version` | GET | 部署自報 `{commit 7 碼, node 大版本, region}`，供 push 後驗收（2026-09-28）| **公開**（proxy 完全相符放行；⛔ 不得加入任何財務數字或 env）|
 
 ## 部署流程（不可更改）
 ```
@@ -121,7 +124,7 @@ tzlth-hq/finance/
 
 > 🔴 **2026-09-16 更正**：本節原標題為「公開 API」、原文寫「無需認證」——**與 2026-05-14 起的實碼不符**。
 > `app/api/summary/route.ts` L8-14 要求 `Bearer` token 比對 `SUMMARY_API_KEY`，不符回 401；
-> `middleware.ts` 註解亦逐字記載「[安全修復 2026-05-14] /api/summary 移出公開路徑，改為 API key 認證」。
+> `middleware.ts`（2026-10-17 更名 `proxy.ts`）註解亦逐字記載「[安全修復 2026-05-14] /api/summary 移出公開路徑，改為 API key 認證」。2026-10-17 起金鑰改常數時間比對（`keyMatches`）。
 > ⛔ **本 repo 為 public** —— 一份把受保護端點描述為公開的文件，對外等同錯誤的攻擊指引。
 > （同類第 2 例；第 1 例為 2026-08-31 的 BASE64→HMAC 更正，當次只改了「技術棧」一行、未掃到本節與「設計決策」節。）
 
@@ -168,7 +171,8 @@ Authorization: Bearer <SUMMARY_API_KEY>
 ## 設計決策
 1. **每年度獨立 JSON**（income-2026.json / income-2027.json）：避免單檔過大，按年查詢效率佳
 2. **Transaction ID 含日期**（INC-20260407-001）：人類可讀，便於追蹤
-3. **`/api/summary` 無 auth**：設計為公開 endpoint，讓儀表板可跨域呼叫
+3. **`/api/summary` 用 API key（Bearer）而非 cookie**：給儀表板伺服端呼叫；proxy 放行、由 route 自己驗金鑰（見「機器介面」節）
+   > 🔴 **2026-10-17 更正**：本行原寫「無 auth：設計為公開 endpoint」——2026-05-14 起即為 API key 認證，2026-09-16 那次更正改了路由表與「機器介面」節，**同檔這一行漏掉**（同類第 3 例；HQ 資安稽核 2026-10-17 撈出）。
 4. **PIN auth 不使用 JWT**：無多用戶需求，**HMAC-SHA256 簽章 token（`timestamp.hmac`）＋ 7 天過期 ＋ `crypto.timingSafeEqual` 常數時間比較**已足夠
    > 🔴 **2026-09-16 更正**：本行原寫「BASE64 + ACCESS_PIN 驗證已足夠」。2026-08-31 那次更正只改了「技術棧」節，
    > 同一份文件下方這句仍留著舊描述 —— **修正的有效範圍等於當次的掃描範圍**（RCF-155）。
@@ -185,6 +189,7 @@ Authorization: Bearer <SUMMARY_API_KEY>
 
 | 日期 | 修改內容 | 狀態 |
 |------|---------|------|
+| 2026-10-17 | 【SEC/DEV】**頁面完整驗簽（HQ 資安稽核 C-1）**：`middleware.ts`→`proxy.ts`（Node）呼叫 `verifyToken`、首頁與月報 `requireAuth()` 再驗；放行改完全相符＋登出公開；登入錯誤延遲 1 秒；summary 常數時間比對。`927d0ff`，本機 24＋6 項、線上兩網域黑箱皆過。詳 `CLAUDE-archive-2026-10.md` | ✅ |
 | 2026-10-14 | 【DEV】**本機 build 閘＋推送後部署結果查詢（總部 L820，RCF-244）**：`.git/hooks/pre-push` 由總部安裝，沒有 build 記號就自動 build、失敗擋下；推完用總部 `deploy_status.py` 查部署結果。本 repo 程式碼未動。說明見部署段 🔒 行 | ✅ |
 | 2026-10-10 | 【DEV/FIN】**寫入不再可能整份覆蓋帳本（HQ tasks「寫入失敗審查結果（10-08）」⑥）**：`update*` 只把 404 當沒檔、其他讀失敗拋錯；sha 同次讀取＋409 重做；三支 API 回 503／409／502，前端刪除與標已收顯示錯誤；`.gitattributes` 順序。詳 `CLAUDE-archive-2026-10.md` | ✅ |
 | 2026-09-28 | 【DEV/FIN】**三項（HQ tasks L905／L178／L586，RCF-206）**：① income 加選填 `platform` 欄（POST 白名單＋表單下拉＋CSV 匯出）；② 首頁加「本月尚未入帳的月費訂閱」（月費型 `renewal_date=null`，原 30 天到期警示結構上觸發不了）；③ 新增公開 `/api/version`。路由表 15→16 handler、`/api/expense` 註明改金額＝刪掉重建。詳 `CLAUDE-archive-2026-09.md` | ✅ |
