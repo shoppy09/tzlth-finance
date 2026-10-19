@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { IncomeTransaction } from '@/lib/github'
 import { DeleteModal } from '@/app/_components/DeleteModal'
+import { api } from '@/lib/api'
 
 const SERVICE_TYPES = ['S0', 'S4', 'S6', '企業包案', '課程', '電子書', '其他']
 const PAYMENT_METHODS = ['transfer', 'cash', 'other']
@@ -35,7 +36,7 @@ export default function IncomePage() {
   const load = useCallback(async () => {
     setLoading(true)
     setLoadError(false)
-    const res = await fetch('/api/income')
+    const res = await api('/api/income')
     if (res.ok) {
       const data = await res.json()
       setTransactions(data.transactions ?? [])
@@ -51,7 +52,7 @@ export default function IncomePage() {
     e.preventDefault()
     setSaving(true)
     setSaveError('')
-    const res = await fetch('/api/income', {
+    const res = await api('/api/income', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...form, amount: Number(form.amount) }),
@@ -61,14 +62,14 @@ export default function IncomePage() {
       setForm({ date: new Date().toISOString().slice(0, 10), amount: '', client_code: '', service_type: 'S4', payment_method: 'transfer', platform: 'direct', status: 'received', note: '' })
       await load()
     } else {
-      setSaveError('儲存失敗，請重試（GitHub API 異常）')
+      setSaveError(`儲存失敗（HTTP ${res.status}），請重試`)
     }
     setSaving(false)
   }
 
   async function handleMarkReceived(id: string) {
     setActionError('')
-    const res = await fetch('/api/income', {
+    const res = await api('/api/income', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status: 'received' }),
@@ -82,7 +83,7 @@ export default function IncomePage() {
 
   async function handleDelete(id: string) {
     setActionError('')
-    const res = await fetch('/api/income', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    const res = await api('/api/income', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     if (!res.ok) {
       const d = await res.json().catch(() => ({}))
       setActionError(`刪除收入失敗（${d.error ?? 'HTTP ' + res.status}），請重新整理確認後再試`)

@@ -189,6 +189,7 @@ Authorization: Bearer <SUMMARY_API_KEY>
 
 | 日期 | 修改內容 | 狀態 |
 |------|---------|------|
+| 2026-10-19 | 【DEV/SEC】**401 導回登入＋Next 16.3.8（HQ 批次:B63）**：`lib/api.ts`，3 頁 10 處改用；儲存失敗改顯示 HTTP 狀態碼（原一律寫「GitHub API 異常」）；proxy 仍是 Node。詳 archive | ✅ |
 | 2026-10-17 | 【SEC/DEV】**頁面完整驗簽（HQ 資安稽核 C-1）**：`middleware.ts`→`proxy.ts`（Node）呼叫 `verifyToken`、首頁與月報 `requireAuth()` 再驗；放行改完全相符＋登出公開；登入錯誤延遲 1 秒；summary 常數時間比對。`927d0ff`，本機 24＋6 項、線上兩網域黑箱皆過。詳 `CLAUDE-archive-2026-10.md` | ✅ |
 | 2026-10-14 | 【DEV】**本機 build 閘＋推送後部署結果查詢（總部 L820，RCF-244）**：`.git/hooks/pre-push` 由總部安裝，沒有 build 記號就自動 build、失敗擋下；推完用總部 `deploy_status.py` 查部署結果。本 repo 程式碼未動。說明見部署段 🔒 行 | ✅ |
 | 2026-10-10 | 【DEV/FIN】**寫入不再可能整份覆蓋帳本（HQ tasks「寫入失敗審查結果（10-08）」⑥）**：`update*` 只把 404 當沒檔、其他讀失敗拋錯；sha 同次讀取＋409 重做；三支 API 回 503／409／502，前端刪除與標已收顯示錯誤；`.gitattributes` 順序。詳 `CLAUDE-archive-2026-10.md` | ✅ |

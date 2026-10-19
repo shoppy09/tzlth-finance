@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ExpenseTransaction } from '@/lib/github'
 import { DeleteModal } from '@/app/_components/DeleteModal'
+import { api } from '@/lib/api'
 
 const CATEGORIES = [
   { value: 'platform', label: '平台費用' },
@@ -36,7 +37,7 @@ export default function ExpensePage() {
   const load = useCallback(async () => {
     setLoading(true)
     setLoadError(false)
-    const res = await fetch('/api/expense')
+    const res = await api('/api/expense')
     if (res.ok) {
       const data = await res.json()
       setTransactions(data.transactions ?? [])
@@ -52,7 +53,7 @@ export default function ExpensePage() {
     e.preventDefault()
     setSaving(true)
     setSaveError('')
-    const res = await fetch('/api/expense', {
+    const res = await api('/api/expense', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...form, amount: Number(form.amount) }),
@@ -62,14 +63,14 @@ export default function ExpensePage() {
       setForm({ date: new Date().toISOString().slice(0, 10), amount: '', category: 'platform', description: '', recurring: false, recurring_frequency: 'monthly', note: '' })
       await load()
     } else {
-      setSaveError('儲存失敗，請重試（GitHub API 異常）')
+      setSaveError(`儲存失敗（HTTP ${res.status}），請重試`)
     }
     setSaving(false)
   }
 
   async function handleDelete(id: string) {
     setActionError('')
-    const res = await fetch('/api/expense', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    const res = await api('/api/expense', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     if (!res.ok) {
       const d = await res.json().catch(() => ({}))
       setActionError(`刪除支出失敗（${d.error ?? 'HTTP ' + res.status}），請重新整理確認後再試`)

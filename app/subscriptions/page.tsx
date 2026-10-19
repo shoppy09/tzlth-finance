@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Subscription } from '@/lib/github'
 import { DeleteModal } from '@/app/_components/DeleteModal'
+import { api } from '@/lib/api'
 
 const CATEGORIES = [
   { value: 'ai', label: 'AI 工具' },
@@ -57,7 +58,7 @@ export default function SubscriptionsPage() {
   const load = useCallback(async () => {
     setLoading(true)
     setLoadError(false)
-    const res = await fetch('/api/subscriptions')
+    const res = await api('/api/subscriptions')
     if (res.ok) {
       const data = await res.json()
       setSubscriptions(data.subscriptions ?? [])
@@ -73,7 +74,7 @@ export default function SubscriptionsPage() {
     e.preventDefault()
     setSaving(true)
     setSaveError('')
-    const res = await fetch('/api/subscriptions', {
+    const res = await api('/api/subscriptions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...form, cost: Number(form.cost || 0), renewal_date: form.renewal_date || null }),
@@ -83,14 +84,14 @@ export default function SubscriptionsPage() {
       setForm({ name: '', category: 'platform', type: 'free', cost: '', billing_cycle: 'free', renewal_date: '', status: 'active', watch_pricing: false, url: '', note: '' })
       await load()
     } else {
-      setSaveError('儲存失敗，請重試')
+      setSaveError(`儲存失敗（HTTP ${res.status}），請重試`)
     }
     setSaving(false)
   }
 
   async function handleDelete(id: string) {
     setActionError('')
-    const res = await fetch('/api/subscriptions', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    const res = await api('/api/subscriptions', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     if (!res.ok) {
       const d = await res.json().catch(() => ({}))
       setActionError(`刪除訂閱失敗（${d.error ?? 'HTTP ' + res.status}），請重新整理確認後再試`)
