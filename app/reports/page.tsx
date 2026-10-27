@@ -1,26 +1,19 @@
-import { getIncomeLedger, getExpenseLedger } from '@/lib/github'
+import { getIncomeLedger, getExpenseLedger, ledgerFileYear } from '@/lib/github'
+import { taipeiMonthsBack } from '@/lib/tw-date'
 import { requireAuth } from '@/lib/require-auth'
 
 function fmt(n: number) {
   return `NT$${n.toLocaleString('zh-TW')}`
 }
 
-function monthsBack(n: number): string[] {
-  const months: string[] = []
-  const today = new Date()
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
-    months.push(d.toISOString().slice(0, 7))
-  }
-  return months
-}
 
 export default async function ReportsPage() {
   await requireAuth() // 讀帳本前先驗簽（資安稽核 C-1，2026-10-17）
-  const months = monthsBack(6)
+  const months = taipeiMonthsBack(6) // 台北月份（2026-10-27）
 
   // Fetch unique years needed
-  const years = [...new Set(months.map(m => parseInt(m.slice(0, 4))))]
+  // 依「年度檔」去重：2026 以前的月份都在 2026 檔，避免同一檔讀兩次、金額重複（2026-10-27）
+  const years = [...new Set(months.map(m => ledgerFileYear(parseInt(m.slice(0, 4)))))]
   const [incomeData, expenseData] = await Promise.all([
     Promise.all(years.map(y => getIncomeLedger(y))),
     Promise.all(years.map(y => getExpenseLedger(y))),

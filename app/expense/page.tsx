@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { ExpenseTransaction } from '@/lib/github'
 import { DeleteModal } from '@/app/_components/DeleteModal'
 import { api } from '@/lib/api'
+import { taipeiToday, taipeiYear } from '@/lib/tw-date'
 
 const CATEGORIES = [
   { value: 'platform', label: '平台費用' },
@@ -25,7 +26,7 @@ export default function ExpensePage() {
   const [monthFilter, setMonthFilter] = useState('all')
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null)
   const [form, setForm] = useState({
-    date: new Date().toISOString().slice(0, 10),
+    date: taipeiToday(),
     amount: '',
     category: 'platform',
     description: '',
@@ -60,7 +61,7 @@ export default function ExpensePage() {
     })
     if (res.ok) {
       setShowForm(false)
-      setForm({ date: new Date().toISOString().slice(0, 10), amount: '', category: 'platform', description: '', recurring: false, recurring_frequency: 'monthly', note: '' })
+      setForm({ date: taipeiToday(), amount: '', category: 'platform', description: '', recurring: false, recurring_frequency: 'monthly', note: '' })
       await load()
     } else {
       setSaveError(`儲存失敗（HTTP ${res.status}），請重試`)
@@ -111,7 +112,7 @@ export default function ExpensePage() {
             {months.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
           <a
-            href={`/api/export?type=expense&year=${new Date().getFullYear()}`}
+            href={`/api/export?type=expense&year=${taipeiYear()}`}
             className="text-xs text-gray-500 hover:text-white px-3 py-2 border border-gray-700 rounded-lg transition-colors"
           >
             📥 匯出

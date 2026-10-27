@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Subscription } from '@/lib/github'
 import { DeleteModal } from '@/app/_components/DeleteModal'
 import { api } from '@/lib/api'
+import { taipeiToday, daysBetween } from '@/lib/tw-date'
 
 const CATEGORIES = [
   { value: 'ai', label: 'AI 工具' },
@@ -26,11 +27,9 @@ const CAT_LABELS: Record<string, string> = {
   ai: 'AI 工具', platform: '平台', domain: '網域', tool: '工具', storage: '儲存空間', other: '其他'
 }
 
+// 台北今天到到期日的天數（2026-10-27 統一走 lib/tw-date，不靠瀏覽器時區）
 function daysUntil(dateStr: string): number {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const target = new Date(dateStr)
-  return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  return daysBetween(taipeiToday(), dateStr)
 }
 
 export default function SubscriptionsPage() {

@@ -1,5 +1,6 @@
 import { computeMonthlySummary, getSubscriptions, getDailyRevenue, getExpenseLedger } from '@/lib/github'
 import { requireAuth } from '@/lib/require-auth'
+import { taipeiToday, taipeiMonth, taipeiYear, taipeiDayOfMonth, daysBetween } from '@/lib/tw-date'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
@@ -12,9 +13,9 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
   const params = await searchParams
   const view = params.view as string | undefined
 
-  const today = new Date()
-  const currentMonth = today.toISOString().slice(0, 7)
-  const currentYear = today.getFullYear().toString()
+  // 台北日期（2026-10-27）：伺服器是 UTC，台北 00:00～08:00 原本會算成昨天／上個月
+  const currentMonth = taipeiMonth()
+  const currentYear = String(taipeiYear())
 
   const isYear = view === 'year'
   const period = isYear ? currentYear : currentMonth
@@ -30,7 +31,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
   //   2026-07～09 Claude Code 月費因此漏記 2 個月（HQ tasks L119）。改以「本月 expense 有沒有這筆」判斷。
   // 比對鍵：expense.description 含訂閱名稱（實際資料「Claude Code Max 5x」含「Claude Code Max」）。
   // 過了「上次入帳日（日）」才提醒，避免每月 1～3 日對 4 日扣款的訂閱誤報。
-  const dayOfMonth = today.getDate()
+  const dayOfMonth = taipeiDayOfMonth()
   const unpaidMonthly = isYear ? [] : subData.subscriptions
     .filter(s => s.status === 'active' && s.billing_cycle === 'monthly' && s.cost > 0)
     .filter(s => !expenseLedger.transactions.some(t => t.date.startsWith(currentMonth) && t.description.includes(s.name)))
@@ -42,11 +43,11 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
     })
 
   // Subscriptions expiring within 30 days
-  const todayMs = new Date().setHours(0, 0, 0, 0)
+  const todayStr = taipeiToday()
   const expiringSoon = subData.subscriptions
     .filter(s => s.status === 'active' && s.renewal_date !== null)
     .map(s => {
-      const days = Math.ceil((new Date(s.renewal_date!).getTime() - todayMs) / (1000 * 60 * 60 * 24))
+      const days = daysBetween(todayStr, s.renewal_date!)
       return { ...s, days }
     })
     .filter(s => s.days <= 30)

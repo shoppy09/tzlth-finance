@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { computeMonthlySummary } from '@/lib/github'
+import { taipeiMonth } from '@/lib/tw-date'
 
 // [2026-10-17] 常數時間比對（同 lib/auth.ts verifyToken 寫法：先比 Buffer 長度，timingSafeEqual 長度不同會拋例外）
 function keyMatches(provided: string, expected: string): boolean {
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url)
-  const month = searchParams.get('month') ?? new Date().toISOString().slice(0, 7)
+  const month = searchParams.get('month') ?? taipeiMonth() // 台北本月（2026-10-27，原 UTC）
   const summary = await computeMonthlySummary(month)
 
   // CORS 僅允許 HQ 儀表板

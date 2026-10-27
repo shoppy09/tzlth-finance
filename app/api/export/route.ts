@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getIncomeLedger, getExpenseLedger } from '@/lib/github'
+import { taipeiYear } from '@/lib/tw-date'
 import { verifyToken, AUTH_COOKIE } from '@/lib/auth'
 
 function checkAuth(req: NextRequest) {
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
   if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(req.url)
-  const year = parseInt(searchParams.get('year') ?? new Date().getFullYear().toString())
+  const year = parseInt(searchParams.get('year') ?? String(taipeiYear()))
   const type = searchParams.get('type') ?? 'income'
 
   const BOM = '\uFEFF' // UTF-8 BOM for Excel Chinese compatibility

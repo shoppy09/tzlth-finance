@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSubscriptionsStrict, updateSubscriptions, ledgerErrorInfo, Subscription } from '@/lib/github'
+import { getSubscriptionsStrict, updateSubscriptions, ledgerErrorInfo, Subscription, nextId, recordDeletedId } from '@/lib/github'
+import { taipeiToday } from '@/lib/tw-date'
 import { verifyToken, AUTH_COOKIE } from '@/lib/auth'
 
 function checkAuth(req: NextRequest) {
@@ -28,15 +29,11 @@ export async function POST(req: NextRequest) {
   try {
     // 衝突重試時 mutate 會用最新清單重跑 ⇒ 編號每次重算
     const id = await updateSubscriptions(data => {
-      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-      const prefix = `SUB-${dateStr}-`
-      const existing = data.subscriptions
-        .filter(s => s.id.startsWith(prefix))
-        .map(s => parseInt(s.id.replace(prefix, ''), 10))
-      const maxSeq = existing.length > 0 ? Math.max(...existing) : 0
+      // 編號日期用台北今天；刪過的編號不重用（2026-10-27）
+      const dateStr = taipeiToday().replace(/-/g, '')
 
       const sub: Subscription = {
-        id: `SUB-${dateStr}-${String(maxSeq + 1).padStart(3, '0')}`,
+        id: nextId(`SUB-${dateStr}`, data.subscriptions.map(s => s.id), data._seq_floor),
         name: body.name ?? '',
         category: body.category ?? 'other',
         type: body.type ?? 'free',
@@ -62,7 +59,10 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await req.json()
-  const { id, ...updates } = body
+  const { id } = body
+  // 只收可編輯欄位（2026-10-27）：原本整包 Object.assign，連 id／created_at 都能被改掉
+  const EDITABLE = ['name', 'category', 'type', 'cost', 'billing_cycle', 'renewal_date', 'status', 'watch_pricing', 'url', 'note'] as const
+  const updates = Object.fromEntries(EDITABLE.filter(k => k in body).map(k => [k, body[k]]))
   try {
     const done = await updateSubscriptions(data => {
       const sub = data.subscriptions.find(s => s.id === id)
@@ -84,7 +84,9 @@ export async function DELETE(req: NextRequest) {
     const done = await updateSubscriptions(data => {
       const before = data.subscriptions.length
       data.subscriptions = data.subscriptions.filter(s => s.id !== id)
-      return data.subscriptions.length < before ? true : null
+      if (data.subscriptions.length === before) return null
+      recordDeletedId(data, id)
+      return true
     })
     if (done === null) return NextResponse.json({ ok: false, error: '找不到這筆訂閱（可能已刪除）' }, { status: 404 })
     return NextResponse.json({ ok: true })

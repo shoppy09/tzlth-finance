@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { IncomeTransaction } from '@/lib/github'
 import { DeleteModal } from '@/app/_components/DeleteModal'
 import { api } from '@/lib/api'
+import { taipeiToday, taipeiYear } from '@/lib/tw-date'
 
 const SERVICE_TYPES = ['S0', 'S4', 'S6', '企業包案', '課程', '電子書', '其他']
 const PAYMENT_METHODS = ['transfer', 'cash', 'other']
@@ -23,7 +24,7 @@ export default function IncomePage() {
   const [monthFilter, setMonthFilter] = useState('all')
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null)
   const [form, setForm] = useState({
-    date: new Date().toISOString().slice(0, 10),
+    date: taipeiToday(),
     amount: '',
     client_code: '',
     service_type: 'S4',
@@ -59,7 +60,7 @@ export default function IncomePage() {
     })
     if (res.ok) {
       setShowForm(false)
-      setForm({ date: new Date().toISOString().slice(0, 10), amount: '', client_code: '', service_type: 'S4', payment_method: 'transfer', platform: 'direct', status: 'received', note: '' })
+      setForm({ date: taipeiToday(), amount: '', client_code: '', service_type: 'S4', payment_method: 'transfer', platform: 'direct', status: 'received', note: '' })
       await load()
     } else {
       setSaveError(`儲存失敗（HTTP ${res.status}），請重試`)
@@ -132,7 +133,7 @@ export default function IncomePage() {
           </select>
           {/* CSV 匯出 */}
           <a
-            href={`/api/export?type=income&year=${new Date().getFullYear()}`}
+            href={`/api/export?type=income&year=${taipeiYear()}`}
             className="text-xs text-gray-500 hover:text-white px-3 py-2 border border-gray-700 rounded-lg transition-colors"
           >
             📥 匯出

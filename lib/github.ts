@@ -1,6 +1,8 @@
 // GitHub API helper — reads/writes tzlth-hq/finance/ledger/
 // Pattern: same as hq-dashboard checklist-state
 
+import { taipeiToday, taipeiYear } from './tw-date'
+
 const REPO = process.env.DATA_REPO ?? 'shoppy09/tzlth-hq'
 const TOKEN = process.env.GITHUB_TOKEN ?? ''
 const BASE = 'https://api.github.com'
@@ -45,10 +47,12 @@ export interface Subscription {
   created_at: string
 }
 
-export interface SubscriptionList { subscriptions: Subscription[] }
+export interface SubscriptionList { subscriptions: Subscription[]; _seq_floor?: Record<string, number> }
 
-export interface IncomeLedger { transactions: IncomeTransaction[] }
-export interface ExpenseLedger { transactions: ExpenseTransaction[] }
+// _seq_floor：各「前綴」（如 INC-20261027）被刪掉過的最大序號；新增時編號不低於它，刪掉的編號不再重用
+//   （2026-10-27 HQ 資安稽核 10-17 第三節「ID 會重用」；crm/client-log.md 會引用收入編號）
+export interface IncomeLedger { transactions: IncomeTransaction[]; _seq_floor?: Record<string, number> }
+export interface ExpenseLedger { transactions: ExpenseTransaction[]; _seq_floor?: Record<string, number> }
 
 const GH_HEADERS = { Authorization: `Bearer ${TOKEN}`, Accept: 'application/vnd.github+json' }
 
@@ -110,34 +114,78 @@ export function ledgerErrorInfo(e: unknown): { status: number; error: string } {
   return { status: 500, error: '未預期錯誤' }
 }
 
-function getIncomePath(year: number) { return `finance/ledger/income-${year}.json` }
-function getExpensePath(year: number) { return `finance/ledger/expense-${year}.json` }
-const today = () => new Date().toISOString().slice(0, 10)
+// ── 年度檔怎麼選（2026-10-27 HQ 資安稽核 10-17 第三節；Tim 裁決改 09-28「寫入端不動」那一項，RCF-275）────
+// 舊寫法：一律用「伺服器現在的 UTC 年」⇒ 1 月補登去年 12 月的交易會進新年檔（月報、年檢視、匯出都少這筆），
+//   改狀態／刪除也只在當年檔找；台北 1/1 00:00～08:00 還會寫進去年檔。
+// 新寫法：檔案年份＝max(2026, 交易日期的年)。income-2026.json 本來就收 2024／2025 的歷史（09-28 裁決：資料不動、檔名不改），
+//   2026 以前的日期照舊進 2026 檔；2027 起依交易日期分檔。改狀態／刪除依編號裡的日期找檔。
+export const FIRST_LEDGER_YEAR = 2026
+export function ledgerFileYear(year: number): number { return Math.max(FIRST_LEDGER_YEAR, year) }
+
+/** YYYY-MM-DD → 年；格式不對回 null */
+export function yearOfDate(date: unknown): number | null {
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null
+  return Number(date.slice(0, 4))
+}
+
+/** INC-20261027-001／EXP-…／SUB-… → 年；格式不對回 null */
+export function yearOfId(id: unknown): number | null {
+  if (typeof id !== 'string') return null
+  const m = id.match(/^[A-Z]+-(\d{4})\d{4}-\d+$/)
+  return m ? Number(m[1]) : null
+}
+
+/** 列表頁要讀的年度檔：台北今年＋去年（1 月還看得到去年 12 月的待收款） */
+export function listLedgerYears(now: Date = new Date()): number[] {
+  const y = taipeiYear(now)
+  return [...new Set([ledgerFileYear(y - 1), ledgerFileYear(y)])]
+}
+
+/** 新編號：同前綴現有最大號與 _seq_floor（刪過的最大號）取大者 +1 ⇒ 刪掉的編號不再重用 */
+export function nextId(prefix: string, ids: string[], floor?: Record<string, number>): string {
+  const p = `${prefix}-`
+  const existing = ids.filter(id => id.startsWith(p)).map(id => parseInt(id.slice(p.length), 10)).filter(n => !Number.isNaN(n))
+  const maxSeq = Math.max(0, floor?.[prefix] ?? 0, ...existing)
+  return `${p}${String(maxSeq + 1).padStart(3, '0')}`
+}
+
+/** 刪除前記下這個編號的序號（只升不降） */
+export function recordDeletedId(data: { _seq_floor?: Record<string, number> }, id: string) {
+  const m = id.match(/^(.+)-(\d+)$/)
+  if (!m) return
+  const seq = parseInt(m[2], 10)
+  data._seq_floor = data._seq_floor ?? {}
+  if (seq > (data._seq_floor[m[1]] ?? 0)) data._seq_floor[m[1]] = seq
+}
+
+function getIncomePath(year: number) { return `finance/ledger/income-${ledgerFileYear(year)}.json` }
+function getExpensePath(year: number) { return `finance/ledger/expense-${ledgerFileYear(year)}.json` }
+const today = () => taipeiToday()
 
 export async function getIncomeLedger(year?: number): Promise<IncomeLedger> {
-  return readJsonFile<IncomeLedger>(getIncomePath(year ?? new Date().getFullYear()), { transactions: [] })
+  return readJsonFile<IncomeLedger>(getIncomePath(year ?? taipeiYear()), { transactions: [] })
 }
 
 export async function getExpenseLedger(year?: number): Promise<ExpenseLedger> {
-  return readJsonFile<ExpenseLedger>(getExpensePath(year ?? new Date().getFullYear()), { transactions: [] })
+  return readJsonFile<ExpenseLedger>(getExpensePath(year ?? taipeiYear()), { transactions: [] })
 }
 
 // 列表頁 API 用：讀失敗拋錯（前端顯示「資料載入失敗」，不再把失敗顯示成空帳）
 export async function getIncomeLedgerStrict(year?: number): Promise<IncomeLedger> {
-  return (await readStrict<IncomeLedger>(getIncomePath(year ?? new Date().getFullYear()), () => ({ transactions: [] }))).data
+  return (await readStrict<IncomeLedger>(getIncomePath(year ?? taipeiYear()), () => ({ transactions: [] }))).data
 }
 
 export async function getExpenseLedgerStrict(year?: number): Promise<ExpenseLedger> {
-  return (await readStrict<ExpenseLedger>(getExpensePath(year ?? new Date().getFullYear()), () => ({ transactions: [] }))).data
+  return (await readStrict<ExpenseLedger>(getExpensePath(year ?? taipeiYear()), () => ({ transactions: [] }))).data
 }
 
 export async function updateIncomeLedger<R>(mutate: (ledger: IncomeLedger) => R | null, year?: number): Promise<R | null> {
-  return updateJsonFile(getIncomePath(year ?? new Date().getFullYear()), () => ({ transactions: [] as IncomeTransaction[] }),
+  return updateJsonFile(getIncomePath(year ?? taipeiYear()), () => ({ transactions: [] as IncomeTransaction[] }),
     `finance: update income ledger ${today()}`, mutate)
 }
 
 export async function updateExpenseLedger<R>(mutate: (ledger: ExpenseLedger) => R | null, year?: number): Promise<R | null> {
-  return updateJsonFile(getExpensePath(year ?? new Date().getFullYear()), () => ({ transactions: [] as ExpenseTransaction[] }),
+  return updateJsonFile(getExpensePath(year ?? taipeiYear()), () => ({ transactions: [] as ExpenseTransaction[] }),
     `finance: update expense ledger ${today()}`, mutate)
 }
 
