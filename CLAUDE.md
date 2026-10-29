@@ -192,6 +192,7 @@ Authorization: Bearer <SUMMARY_API_KEY>
 
 | 日期 | 修改內容 | 狀態 |
 |------|---------|------|
+| 2026-10-29 | 【SEC/DEV】**Next 16.3.8→16.4.3＋npm audit fix（HQ RCF-279，批次:B72）**：修 GHSA-2464／673q critical（Dependabot 漏報）；`d90ae3c`，未登入導 /login、登入後總覽正常。HQ dev/deploy-verify/SYS-09-2026-10-29-next1643.md | ✅ |
 | 2026-10-27 | 【DEV/SEC】**帳本年份與編號（HQ 資安稽核 10-17 第三節，RCF-277）**：選檔改 max(2026, 交易年)、台北日期 15 處（`lib/tw-date.ts`）、列表今年＋去年、刪掉的編號不重用、缺日期 400、訂閱 PATCH 只收可編輯欄位；本機真模組新版 13/13、舊版重現 11 條錯；summary 範例改示意數字。詳 archive | ✅ |
 | 2026-10-19 | 【DEV/SEC】**401 導回登入＋Next 16.3.8（HQ 批次:B63）**：`lib/api.ts`，3 頁 10 處改用；儲存失敗改顯示 HTTP 狀態碼（原一律寫「GitHub API 異常」）；proxy 仍是 Node。詳 archive | ✅ |
 | 2026-10-17 | 【SEC/DEV】**頁面完整驗簽（HQ 資安稽核 C-1）**：`middleware.ts`→`proxy.ts`（Node）呼叫 `verifyToken`、首頁與月報 `requireAuth()` 再驗；放行改完全相符＋登出公開；登入錯誤延遲 1 秒；summary 常數時間比對。`927d0ff`，本機 24＋6 項、線上兩網域黑箱皆過。詳 `CLAUDE-archive-2026-10.md` | ✅ |
